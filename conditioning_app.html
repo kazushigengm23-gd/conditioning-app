@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Conditioning App</title>
+<style>
+  :root {
+    --sage:#5a7a6a;--sage-light:#e8f0ec;--sage-mid:#a8c4b4;
+    --blush:#c4857a;--blush-light:#f5ede8;
+    --sand:#e8e0d4;--sand-dark:#b8a898;
+    --charcoal:#2c2c2a;--muted:#6b6b68;--muted2:#9a9994;
+    --white:#fafaf8;--card-bg:#ffffff;--border:rgba(44,44,42,0.1);
+    --radius:16px;--radius-sm:10px;
+    --cf-color:#c4857a;--cf-bg:#f5ede8;
+    --bd-color:#8a7a5a;--bd-bg:#f0ece0;
+    --rec-color:#5a7a6a;--rec-bg:#e8f0ec;
+    --sup-color:#7a6a8a;--sup-bg:#ede8f0;
+    --rest-color:#6b8aaa;--rest-bg:#e8eef5;
+    --off-color:#9a9994;--off-bg:#f0efed;
+    --font:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{font-family:var(--font);background:#f4f1ec;color:var(--charcoal);min-height:100vh;padding-bottom:80px;font-size:15px;line-height:1.6;}
+  .app-header{background:var(--white);border-bottom:1px solid var(--border);padding:16px 20px 12px;position:sticky;top:0;z-index:100;}
+  .header-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+  .app-title{font-size:13px;font-weight:600;letter-spacing:.08em;color:var(--sage);text-transform:uppercase;}
+  .today-date{font-size:12px;color:var(--muted2);}
+  .mini-progress-bar{height:3px;background:var(--sand);border-radius:2px;overflow:hidden;margin-top:8px;}
+  .mini-progress-fill{height:100%;background:var(--sage);border-radius:2px;transition:width .4s ease;}
+  .mini-progress-label{font-size:11px;color:var(--muted2);text-align:right;margin-top:3px;}
+  .tab-nav{position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--border);display:flex;z-index:200;padding-bottom:env(safe-area-inset-bottom);}
+  .tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 2px 8px;border:none;background:none;color:var(--muted2);font-size:9px;font-family:var(--font);cursor:pointer;transition:color .2s;gap:3px;}
+  .tab-btn.active{color:var(--sage);}
+  .tab-btn svg{width:20px;height:20px;}
+  .screen{display:none;padding:16px 16px 0;}
+  .screen.active{display:block;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  .card{background:var(--card-bg);border-radius:var(--radius);padding:16px;margin-bottom:12px;border:1px solid var(--border);animation:fadeUp .3s ease both;}
+  .card-title{font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;}
+  .day-type-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;margin-bottom:16px;}
+  .achievement-ring{display:flex;flex-direction:column;align-items:center;margin:4px 0 16px;}
+  .ring-container{position:relative;width:100px;height:100px;}
+  .ring-svg{width:100px;height:100px;transform:rotate(-90deg);}
+  .ring-bg{fill:none;stroke:var(--sand);stroke-width:8;}
+  .ring-fill{fill:none;stroke:var(--sage);stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .6s ease;}
+  .ring-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;}
+  .ring-pct{font-size:22px;font-weight:700;color:var(--charcoal);}
+  .ring-label{font-size:10px;color:var(--muted2);}
+  .motivate-msg{font-size:13px;color:var(--muted);text-align:center;margin-top:8px;font-style:italic;}
+  .check-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--sand);cursor:pointer;transition:opacity .2s;}
+  .check-item:last-child{border-bottom:none;}
+  .check-item.done{opacity:.5;}
+  .check-box{width:22px;height:22px;border-radius:6px;border:2px solid var(--sage-mid);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all .2s;background:white;}
+  .check-item.done .check-box{background:var(--sage);border-color:var(--sage);}
+  .check-box svg{display:none;width:13px;height:13px;}
+  .check-item.done .check-box svg{display:block;}
+  .check-label{font-size:14px;line-height:1.4;flex:1;}
+  .check-sub{font-size:11px;color:var(--muted2);margin-top:2px;}
+  .quote-card{background:var(--sage-light);border-radius:var(--radius);padding:16px;margin-bottom:12px;}
+  .quote-text{font-size:13px;color:var(--sage);line-height:1.7;font-style:italic;}
+  .menu-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--sand);font-size:13px;}
+  .menu-item:last-child{border-bottom:none;}
+  .menu-num{width:20px;height:20px;border-radius:50%;background:var(--sage-light);color:var(--sage);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .menu-detail{flex:1;}
+  .menu-name{font-weight:600;color:var(--charcoal);}
+  .menu-name-popup{font-weight:600;color:var(--sage);text-decoration:underline;text-decoration-style:dotted;cursor:pointer;}
+  .menu-note{font-size:11px;color:var(--muted2);margin-top:2px;}
+  /* Calendar Mon-first */
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+  .cal-dow{text-align:center;font-size:10px;color:var(--muted2);font-weight:600;padding:4px 0 6px;}
+  .cal-dow.sun{color:#c4857a;}
+  .cal-cell{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;font-size:12px;cursor:pointer;background:var(--white);border:1px solid transparent;transition:all .15s;}
+  .cal-cell.empty{background:transparent;border:none;cursor:default;}
+  .cal-cell.today{border-color:var(--sage);font-weight:700;}
+  .cal-cell.off{background:var(--off-bg);}
+  .cal-cell.cf{background:var(--cf-bg);}
+  .cal-cell.bd{background:var(--bd-bg);}
+  .cal-cell.rec{background:var(--rec-bg);}
+  .cal-cell.sup{background:var(--sup-bg);}
+  .cal-cell.rest{background:var(--rest-bg);}
+  .cal-num{font-size:12px;font-weight:500;line-height:1;}
+  .cal-dot{width:5px;height:5px;border-radius:50%;margin-top:2px;}
+  .cf .cal-dot{background:var(--cf-color);}
+  .bd .cal-dot{background:var(--bd-color);}
+  .rec .cal-dot{background:var(--rec-color);}
+  .sup .cal-dot{background:var(--sup-color);}
+  .rest .cal-dot{background:var(--rest-color);}
+  .cal-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+  .legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);}
+  .legend-dot{width:8px;height:8px;border-radius:50%;}
+  .cal-detail{background:var(--sage-light);border-radius:var(--radius-sm);padding:12px;margin-top:10px;font-size:13px;}
+  .cal-detail-date{font-weight:700;color:var(--sage);margin-bottom:6px;}
+  .cal-detail-type{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;margin-bottom:8px;}
+  .cal-detail-menu{color:var(--muted);line-height:2.2;}
+  .cal-menu-popup-btn{background:none;border:none;color:var(--sage);font-size:13px;text-decoration:underline;text-decoration-style:dotted;cursor:pointer;font-family:var(--font);padding:0;}
+  /* Popup */
+  .popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:flex;align-items:flex-end;justify-content:center;}
+  .popup-box{background:var(--white);border-radius:20px 20px 0 0;padding:20px 20px 36px;width:100%;max-width:480px;max-height:82vh;overflow-y:auto;}
+  .popup-close{float:right;background:var(--sand);border:none;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;color:var(--muted);font-family:var(--font);line-height:28px;text-align:center;}
+  .popup-cat{font-size:10px;color:var(--sage);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;}
+  .popup-title{font-size:17px;font-weight:700;color:var(--charcoal);margin-bottom:14px;}
+  .popup-step{display:flex;gap:10px;margin-bottom:11px;align-items:flex-start;}
+  .popup-step-num{width:22px;height:22px;border-radius:50%;background:var(--sage-light);color:var(--sage);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+  .popup-step-text{font-size:13px;line-height:1.6;color:var(--charcoal);}
+  .popup-point{background:var(--blush-light);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--blush);margin-top:14px;line-height:1.7;}
+  /* Graph */
+  .graph-section-label{font-size:11px;font-weight:600;color:var(--muted2);letter-spacing:.06em;text-transform:uppercase;padding:10px 0 4px;border-top:1px solid var(--sand);margin-top:4px;}
+  .graph-section-label.first{border-top:none;margin-top:0;padding-top:0;}
+  .graph-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+  .graph-date{font-size:11px;color:var(--muted2);width:66px;flex-shrink:0;text-align:right;}
+  .graph-date.today-lbl{color:var(--sage);font-weight:700;}
+  .graph-bar-wrap{flex:1;height:22px;background:var(--sand);border-radius:4px;overflow:hidden;position:relative;}
+  .graph-bar{height:100%;border-radius:4px;transition:width .5s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;}
+  .graph-bar.high{background:var(--sage);}
+  .graph-bar.mid{background:var(--sage-mid);}
+  .graph-bar.low{background:var(--sand-dark);}
+  .graph-empty{font-size:11px;color:var(--muted2);padding-left:6px;position:absolute;top:50%;transform:translateY(-50%);}
+  .graph-pct{font-size:11px;color:white;font-weight:600;}
+  .monthly-review{background:var(--sage-light);border-radius:var(--radius-sm);padding:14px;margin:8px 0 12px;font-size:13px;color:var(--charcoal);line-height:1.8;}
+  .monthly-review-title{font-weight:700;font-size:14px;color:var(--sage);margin-bottom:8px;}
+  .range-toggle{display:flex;gap:6px;margin-bottom:14px;}
+  .range-btn{padding:6px 14px;border-radius:16px;border:1px solid var(--border);font-size:12px;cursor:pointer;background:var(--white);color:var(--muted);font-family:var(--font);transition:all .15s;}
+  .range-btn.active{background:var(--sage);color:white;border-color:var(--sage);}
+  /* Week tab */
+  .week-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:0;}
+  .week-nav-btn{background:none;border:none;font-size:22px;color:var(--sage);cursor:pointer;padding:0 8px;font-family:var(--font);}
+  .week-title{font-size:14px;font-weight:700;color:var(--charcoal);}
+  .week-theme-card{background:var(--sage-light);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px;}
+  .week-theme-label{font-size:10px;font-weight:600;color:var(--sage);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+  .week-theme-text{font-size:14px;color:var(--sage);font-weight:600;}
+  .day-card{background:var(--card-bg);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;border:1px solid var(--border);}
+  .day-card.today-card{border-color:var(--sage);border-width:2px;}
+  .day-card-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .day-card-dow{font-size:12px;font-weight:700;color:var(--muted2);width:18px;flex-shrink:0;}
+  .day-card.today-card .day-card-dow{color:var(--sage);}
+  .day-card-date{font-size:12px;color:var(--muted2);}
+  .day-card-badge{padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;margin-left:auto;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;}
+  .day-card-menu{font-size:12px;color:var(--muted);line-height:1.9;}
+  .day-card-popup-link{background:none;border:none;color:var(--sage);font-size:12px;text-decoration:underline;text-decoration-style:dotted;cursor:pointer;font-family:var(--font);padding:0;}
+  /* Logs */
+  .log-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--sand);}
+  .log-row:last-child{border-bottom:none;}
+  .log-label{font-size:13px;color:var(--charcoal);}
+  .log-input{border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:13px;font-family:var(--font);background:var(--white);width:110px;text-align:right;color:var(--charcoal);}
+  .log-textarea{width:100%;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;font-family:var(--font);background:var(--white);color:var(--charcoal);resize:none;margin-top:4px;min-height:56px;}
+  .pain-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--sand);}
+  .pain-row:last-child{border-bottom:none;}
+  .pain-label{font-size:13px;}
+  .pain-btns{display:flex;gap:4px;}
+  .pain-btn{padding:3px 9px;border-radius:10px;border:1px solid var(--border);font-size:11px;cursor:pointer;background:var(--white);color:var(--muted);transition:all .15s;font-family:var(--font);}
+  .pain-btn.none.selected{background:var(--rec-bg);color:var(--rec-color);border-color:var(--rec-color);}
+  .pain-btn.little.selected{background:var(--bd-bg);color:var(--bd-color);border-color:var(--bd-color);}
+  .pain-btn.strong.selected{background:var(--cf-bg);color:var(--cf-color);border-color:var(--cf-color);}
+  .star-rating{display:flex;gap:4px;}
+  .star{font-size:20px;cursor:pointer;color:var(--sand-dark);transition:color .15s;}
+  .star.filled{color:#e8b84b;}
+  .save-btn{width:100%;background:var(--sage);color:white;border:none;border-radius:var(--radius-sm);padding:13px;font-size:14px;font-family:var(--font);font-weight:600;cursor:pointer;margin-top:12px;transition:opacity .2s;}
+  .save-btn:active{opacity:.8;}
+  .collapsible{overflow:hidden;transition:max-height .3s ease;}
+  .toggle-btn{background:none;border:none;font-size:12px;color:var(--sage);cursor:pointer;font-family:var(--font);padding:4px 0;text-decoration:underline;text-underline-offset:2px;}
+  .tip-chip{display:inline-block;background:var(--bd-bg);color:var(--bd-color);border-radius:12px;padding:4px 12px;font-size:12px;font-weight:600;margin:3px;}
+  input[type="number"]{-moz-appearance:textfield;}
+  input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none;}
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="header-top">
+    <span class="app-title">Conditioning</span>
+    <span class="today-date" id="headerDate"></span>
+  </div>
+  <div class="mini-progress-bar"><div class="mini-progress-fill" id="miniProgressFill" style="width:0%"></div></div>
+  <div class="mini-progress-label" id="miniProgressLabel">今日の達成率 0%</div>
+</div>
+
+<!-- TODAY -->
+<div class="screen active" id="screen-today">
+  <div class="achievement-ring">
+    <div class="ring-container">
+      <svg class="ring-svg" viewBox="0 0 100 100">
+        <circle class="ring-bg" cx="50" cy="50" r="40"/>
+        <circle class="ring-fill" id="ringFill" cx="50" cy="50" r="40" stroke-dasharray="251.2" stroke-dashoffset="251.2"/>
+      </svg>
+      <div class="ring-text"><div class="ring-pct" id="ringPct">0%</div><div class="ring-label">達成率</div></div>
+    </div>
+    <div class="motivate-msg" id="motivateMsg">今日も丁寧に、一歩ずつ。</div>
+  </div>
+  <div class="card">
+    <div id="dayTypeBadgeWrap"></div>
+    <div class="card-title" style="margin-top:4px;margin-bottom:8px;">今日のメニュー</div>
+    <div id="todayMenuList"></div>
+    <button class="toggle-btn" onclick="toggleMenuDetail()">▸ 種目詳細を見る</button>
+    <div class="collapsible" id="menuDetail" style="max-height:0;"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">チェックリスト</div>
+    <div id="checklistWrap"></div>
+  </div>
+  <div class="card" id="cfLogCard" style="display:none;">
+    <div class="card-title">クロスフィット記録</div>
+    <div class="log-row"><span class="log-label">WODメモ</span></div>
+    <textarea class="log-textarea" id="cfWod" placeholder="今日のWOD内容..." rows="2"></textarea>
+    <div class="log-row"><span class="log-label">使用重量</span><input class="log-input" type="text" id="cfWeight" placeholder="例: 10kg"></div>
+    <div class="log-row"><span class="log-label">きつさ</span><div class="star-rating" id="cfHardStar"><span class="star" onclick="setStar('cfHard',1)">★</span><span class="star" onclick="setStar('cfHard',2)">★</span><span class="star" onclick="setStar('cfHard',3)">★</span><span class="star" onclick="setStar('cfHard',4)">★</span><span class="star" onclick="setStar('cfHard',5)">★</span></div></div>
+    <div class="pain-row"><span class="pain-label">手首の痛み</span><div class="pain-btns"><button class="pain-btn none" onclick="setPain('cfWrist','none',this)">なし</button><button class="pain-btn little" onclick="setPain('cfWrist','little',this)">少し</button><button class="pain-btn strong" onclick="setPain('cfWrist','strong',this)">強い</button></div></div>
+    <div class="pain-row"><span class="pain-label">股関節の痛み</span><div class="pain-btns"><button class="pain-btn none" onclick="setPain('cfHip','none',this)">なし</button><button class="pain-btn little" onclick="setPain('cfHip','little',this)">少し</button><button class="pain-btn strong" onclick="setPain('cfHip','strong',this)">強い</button></div></div>
+    <div class="log-row"><span class="log-label">次回コーチへ相談</span></div>
+    <textarea class="log-textarea" id="cfCoach" placeholder="例: 手首が痛いので代替動作を相談..." rows="2"></textarea>
+    <button class="save-btn" onclick="saveCfLog()">保存する</button>
+  </div>
+  <div class="card" id="bdLogCard" style="display:none;">
+    <div class="card-title">バドミントン記録</div>
+    <div style="margin-bottom:12px;"><div class="card-title" style="margin-bottom:6px;font-size:11px;">今日の意識ポイント</div><div id="bdTipsWrap"></div></div>
+    <div class="log-row"><span class="log-label">次回への一言</span></div>
+    <textarea class="log-textarea" id="bdNote" placeholder="気づいたこと、次に意識すること..." rows="2"></textarea>
+    <button class="save-btn" onclick="saveBdLog()">保存する</button>
+  </div>
+  <div class="card">
+    <div class="card-title">体調ログ</div>
+    <div class="log-row"><span class="log-label">睡眠時間</span><div style="display:flex;align-items:center;gap:4px;"><input class="log-input" type="number" id="sleepHour" min="0" max="12" step="0.5" placeholder="7" style="width:70px;"><span style="font-size:13px;color:var(--muted);">時間</span></div></div>
+    <div class="log-row"><span class="log-label">疲労感</span><div class="star-rating" id="fatigueStar"><span class="star" onclick="setStar('fatigue',1)">★</span><span class="star" onclick="setStar('fatigue',2)">★</span><span class="star" onclick="setStar('fatigue',3)">★</span><span class="star" onclick="setStar('fatigue',4)">★</span><span class="star" onclick="setStar('fatigue',5)">★</span></div></div>
+    <div class="pain-row"><span class="pain-label">手首</span><div class="pain-btns"><button class="pain-btn none" onclick="setPain('wrist','none',this)">なし</button><button class="pain-btn little" onclick="setPain('wrist','little',this)">少し</button><button class="pain-btn strong" onclick="setPain('wrist','strong',this)">強い</button></div></div>
+    <div class="pain-row"><span class="pain-label">股関節</span><div class="pain-btns"><button class="pain-btn none" onclick="setPain('hip','none',this)">なし</button><button class="pain-btn little" onclick="setPain('hip','little',this)">少し</button><button class="pain-btn strong" onclick="setPain('hip','strong',this)">強い</button></div></div>
+    <div class="pain-row"><span class="pain-label">腰</span><div class="pain-btns"><button class="pain-btn none" onclick="setPain('back','none',this)">なし</button><button class="pain-btn little" onclick="setPain('back','little',this)">少し</button><button class="pain-btn strong" onclick="setPain('back','strong',this)">強い</button></div></div>
+    <div class="pain-row"><span class="pain-label">肩・首</span><div class="pain-btns"><button class="pain-btn none" onclick="setPain('shoulder','none',this)">なし</button><button class="pain-btn little" onclick="setPain('shoulder','little',this)">少し</button><button class="pain-btn strong" onclick="setPain('shoulder','strong',this)">強い</button></div></div>
+    <div class="log-row"><span class="log-label">メモ</span></div>
+    <textarea class="log-textarea" id="condMemo" placeholder="気になることなど..." rows="2"></textarea>
+    <button class="save-btn" onclick="saveCondLog()">体調を保存する</button>
+  </div>
+  <div class="quote-card"><div class="quote-text" id="quoteText"></div></div>
+  <div style="height:8px;"></div>
+</div>
+
+<!-- WEEK TAB -->
+<div class="screen" id="screen-week">
+  <div class="card" style="padding:12px 16px;">
+    <div class="week-nav">
+      <button class="week-nav-btn" onclick="changeWeek(-1)">‹</button>
+      <div class="week-title" id="weekTabTitle"></div>
+      <button class="week-nav-btn" onclick="changeWeek(1)">›</button>
+    </div>
+  </div>
+  <div class="week-theme-card" id="weekThemeCard"></div>
+  <div id="weekDayCards"></div>
+  <div style="height:8px;"></div>
+</div>
+
+<!-- CALENDAR -->
+<div class="screen" id="screen-cal">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <button onclick="changeMonth(-1)" style="background:none;border:none;font-size:22px;color:var(--sage);cursor:pointer;padding:0 8px;font-family:var(--font);">‹</button>
+      <div style="font-size:16px;font-weight:700;color:var(--charcoal);" id="calMonthTitle"></div>
+      <button onclick="changeMonth(1)" style="background:none;border:none;font-size:22px;color:var(--sage);cursor:pointer;padding:0 8px;font-family:var(--font);">›</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted2);text-align:center;margin-bottom:10px;">日付をタップ → 種目名をタップで動きを確認</div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--cf-color);"></div>CF</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--bd-color);"></div>Bd</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--sup-color);"></div>補強</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--rec-color);"></div>回復</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--rest-color);"></div>休養</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--off-color);"></div>個人予定</div>
+    </div>
+  </div>
+  <div class="cal-detail" id="calDetail" style="display:none;"></div>
+  <div class="card" id="calSummaryCard"></div>
+  <div style="height:8px;"></div>
+</div>
+
+<!-- GRAPH -->
+<div class="screen" id="screen-graph">
+  <div class="card">
+    <div class="card-title">達成率グラフ</div>
+    <div class="range-toggle">
+      <button class="range-btn active" onclick="setRange(7,this)">直近7日</button>
+      <button class="range-btn" onclick="setRange(14,this)">14日</button>
+      <button class="range-btn" onclick="setRange(30,this)">30日</button>
+    </div>
+    <div id="graphContainer"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">週間振り返り</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.7;padding:4px 0;" id="weekMsg"></div>
+  </div>
+  <div style="height:8px;"></div>
+</div>
+
+<!-- Nav -->
+<nav class="tab-nav">
+  <button class="tab-btn active" onclick="showScreen('today',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>今日
+  </button>
+  <button class="tab-btn" onclick="showScreen('week',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="15" x2="16" y2="15"/></svg>今週
+  </button>
+  <button class="tab-btn" onclick="showScreen('cal',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>カレンダー
+  </button>
+  <button class="tab-btn" onclick="showScreen('graph',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>グラフ
+  </button>
+</nav>
+
+<!-- Exercise Popup -->
+<div class="popup-overlay" id="exPopupOverlay" style="display:none;" onclick="closePopupBg(event)">
+  <div class="popup-box" id="exPopupBox">
+    <button class="popup-close" onclick="closePopup()">×</button>
+    <div class="popup-cat" id="exPopupCat"></div>
+    <div class="popup-title" id="exPopupTitle"></div>
+    <div id="exPopupBody"></div>
+  </div>
+</div>
+
+<script>
+// ===== SCHEDULE =====
+const SCHEDULE={
+  '2026-05-11':{type:'rest',label:'完全休養',cssClass:'rest'},
+  '2026-05-12':{type:'cf',label:'クロスフィット①（19:50〜）',cssClass:'cf'},
+  '2026-05-13':{type:'rec',label:'回復・ストレッチ 10分',cssClass:'rec'},
+  '2026-05-14':{type:'rec',label:'ストレッチ 20分',cssClass:'rec'},
+  '2026-05-15':{type:'rec',label:'ストレッチ 10分',cssClass:'rec'},
+  '2026-05-16':{type:'sup',label:'休日補強 30〜60分',cssClass:'sup'},
+  '2026-05-17':{type:'cf',label:'クロスフィット②（候補）',cssClass:'cf'},
+  '2026-05-18':{type:'rest',label:'完全休養',cssClass:'rest'},
+  '2026-05-19':{type:'rec',label:'ストレッチ 10分',cssClass:'rec'},
+  '2026-05-20':{type:'cf',label:'クロスフィット③（候補）',cssClass:'cf'},
+  '2026-05-21':{type:'rec',label:'回復・ストレッチ 10分',cssClass:'rec'},
+  '2026-05-22':{type:'rec',label:'ストレッチ 20分',cssClass:'rec'},
+  '2026-05-23':{type:'bd',label:'バドミントン①（夜・候補）',cssClass:'bd'},
+  '2026-05-24':{type:'sup',label:'休日補強 30〜60分',cssClass:'sup'},
+  '2026-05-25':{type:'rest',label:'完全休養',cssClass:'rest'},
+  '2026-05-26':{type:'rec',label:'ストレッチ 10分',cssClass:'rec'},
+  '2026-05-27':{type:'cf',label:'クロスフィット④',cssClass:'cf'},
+  '2026-05-28':{type:'rec',label:'回復・ストレッチ 10分',cssClass:'rec'},
+  '2026-05-29':{type:'rec',label:'ストレッチ 20分',cssClass:'rec'},
+  '2026-05-30':{type:'bd',label:'バドミントン②（夜・候補）',cssClass:'bd'},
+  '2026-05-31':{type:'cf',label:'クロスフィット⑤（候補）',cssClass:'cf'},
+  '2026-06-01':{type:'rest',label:'完全休養',cssClass:'rest'},
+  '2026-06-02':{type:'cf',label:'クロスフィット①',cssClass:'cf'},
+  '2026-06-03':{type:'rec',label:'回復・ストレッチ 10分',cssClass:'rec'},
+  '2026-06-04':{type:'rec',label:'ストレッチ 20分',cssClass:'rec'},
+  '2026-06-05':{type:'cf',label:'クロスフィット②',cssClass:'cf'},
+  '2026-06-06':{type:'off',label:'個人予定（運動なし）',cssClass:'off'},
+  '2026-06-07':{type:'off',label:'個人予定（運動なし）',cssClass:'off'},
+  '2026-06-08':{type:'rest',label:'完全休養・回復',cssClass:'rest'},
+  '2026-06-09':{type:'bd',label:'バドミントン①（夜）',cssClass:'bd'},
+  '2026-06-10':{type:'rec',label:'回復・ストレッチ 10分',cssClass:'rec'},
+  '2026-06-11':{type:'rec',label:'ストレッチ 20分',cssClass:'rec'},
+  '2026-06-12':{type:'cf',label:'クロスフィット③',cssClass:'cf'},
+  '2026-06-13':{type:'sup',label:'休日補強 30〜60分',cssClass:'sup'},
+  '2026-06-14':{type:'off',label:'個人予定（運動なし）',cssClass:'off'},
+  '2026-06-15':{type:'off',label:'個人予定（運動なし）',cssClass:'off'},
+  '2026-06-16':{type:'cf',label:'クロスフィット④',cssClass:'cf'},
+  '2026-06-17':{type:'rec',label:'回復・ストレッチ 10分',cssClass:'rec'},
+  '2026-06-18':{type:'rec',label:'ストレッチ 20分',cssClass:'rec'},
+  '2026-06-19':{type:'bd',label:'バドミントン②（夜）',cssClass:'bd'},
+  '2026-06-20':{type:'sup',label:'休日補強 30〜60分',cssClass:'sup'},
+  '2026-06-21':{type:'rest',label:'完全休養',cssClass:'rest'},
+  '2026-06-22':{type:'rec',label:'ストレッチ 10分',cssClass:'rec'},
+  '2026-06-23':{type:'cf',label:'クロスフィット⑤',cssClass:'cf'},
+  '2026-06-24':{type:'rec',label:'回復・ストレッチ 10分',cssClass:'rec'},
+  '2026-06-25':{type:'rec',label:'ストレッチ 20分',cssClass:'rec'},
+  '2026-06-26':{type:'bd',label:'バドミントン③（夜）',cssClass:'bd'},
+  '2026-06-27':{type:'off',label:'個人予定（運動なし）',cssClass:'off'},
+  '2026-06-28':{type:'off',label:'個人予定（運動なし）',cssClass:'off'},
+  '2026-06-29':{type:'rest',label:'完全休養・回復',cssClass:'rest'},
+  '2026-06-30':{type:'bd',label:'バドミントン④（夜）',cssClass:'bd'},
+};
+
+// ===== EXERCISE POPUP DATA =====
+const EX={
+  '横隔膜呼吸':{cat:'呼吸・体幹の土台',steps:['仰向けに寝て膝を立て、手をお腹の上に置く。','鼻からゆっくり吸い、お腹が膨らむのを感じる（胸は動かさないイメージ）。','口からゆっくり吐き、お腹がへこむのを感じる。','吸う4秒・吐く6秒のリズムで10回繰り返す。'],point:'肋骨が左右に広がる感覚があればOK。首や肩に力が入らないように。'},
+  'キャット＆カウ':{cat:'背骨の柔軟性・姿勢リセット',steps:['四つん這いになる。手は肩の真下、膝は股関節の真下。','【カウ】息を吸いながら背中を反らせ、頭とお尻を天井に向ける。','【キャット】息を吐きながら背中を丸め、頭とお尻を床に向ける。おへそを引き込むイメージ。','吸う・吐くに合わせてゆっくり10回繰り返す。'],point:'腰だけでなく、背骨全体（首→胸→腰）を波のように動かすと効果的。'},
+  '胸椎回旋ストレッチ':{cat:'胸椎（背中上部）の動き改善',steps:['横向きに寝て、膝を90度に曲げる。下の腕を前に伸ばし、上の腕も同方向に重ねる。','上の腕だけを体の反対側へゆっくり回す（天井→床の向こう側へ）。','目線も腕の先を追う。腰は動かさず、胸の部分だけを回すイメージ。','戻してきて、左右各5回繰り返す。'],point:'腰が動いてしまう場合はタオルを膝の間に挟むと安定する。'},
+  'ヒップフレクサーストレッチ':{cat:'股関節前面・腸腰筋のストレッチ',steps:['片膝立ちになる（右足を前に、左膝を床につける）。','骨盤を立てたまま（腰を反らせず）、重心を前にゆっくり移動させる。','左の股関節前面に伸びを感じたらそこで30秒キープ。','左右を入れ替えて同様に行う。'],point:'腰が反りすぎないように。骨盤を「前傾させない」意識が大切。'},
+  '肩甲骨ウォールスライド':{cat:'肩甲骨の動き・猫背改善',steps:['壁に背中・後頭部・両肘・手の甲をすべてつける（難しければ無理しない）。','肘を曲げたW形から、ゆっくり腕を上に伸ばすY形へ。','壁から離れないように意識しながら上まで上げ、ゆっくり戻す。','10回繰り返す。'],point:'肩が耳に近づいたり、腰が壁から離れたりしたら動作を小さくする。'},
+  'ニートゥーチェスト':{cat:'体幹・腰椎の安定',steps:['仰向けに寝て、両膝を立てる。','片方の膝を胸に引き寄せ、両手で軽く押さえる。','反対の足は床についたまま、腰が床から浮かないように保つ。','左右各5回ずつゆっくり行う。'],point:'腰が床から離れたら引き寄せすぎ。浮かない範囲で行う。'},
+  'デッドバグ':{cat:'体幹安定・インナーマッスル強化',steps:['仰向けに寝て、両手を天井に。両膝を90度に曲げて持ち上げる（テーブルトップ）。','息を吐きながら、右手と左足を同時にゆっくり床に近づける。床にはつけない。','息を吸いながら元に戻し、反対側（左手・右足）を行う。','左右各5回。腰が床から浮かないことが最重要。'],point:'お腹に手を当てて腰が床に押しつけられているか確認しながら行うと◎。'},
+  'グルートブリッジ':{cat:'お尻・股関節の強化',steps:['仰向けに寝て、膝を立てる。足は腰幅程度に開く。','お尻をギュッと締めながら、腰を床からゆっくり持ち上げる。','肩・腰・膝が一直線になったら1〜2秒キープ。','ゆっくり下ろす。15回繰り返す。'],point:'腰を反らせて高く上げすぎないこと。お尻で持ち上げる意識を。'},
+  'クラムシェル':{cat:'中殿筋強化・XO脚対策',steps:['横向きに寝て、膝を約45度曲げる。足首は重ねたまま。','骨盤を動かさず、上の膝だけを貝が開くようにゆっくり上に開く。','限界まで開いたら1秒キープ、ゆっくり戻す。','左右各15回。チューブがあれば膝の上に巻くと負荷アップ。'],point:'腰やお尻が後ろに回らないように。骨盤が動いたら動作が大きすぎ。'},
+  'バードドッグ':{cat:'体幹安定・左右バランス改善',steps:['四つん這いになる。手は肩の下、膝は股関節の下。','対角の腕と脚を同時にゆっくり伸ばす（右手・左足）。','伸ばした状態で1〜2秒キープ。体がぐらつかないよう体幹に力を入れる。','ゆっくり戻して反対側へ。左右各10回。'],point:'伸ばした腕・足が高くなりすぎないように。腰の反りに注意。'},
+  'スクワット':{cat:'下半身全体の強化',steps:['足を肩幅に開き、つま先を少し外に向けて立つ。','胸を張ったまま、椅子に座るようにゆっくり腰を下ろす。','膝がつま先の方向に向いているか確認。内側に崩れないように。','太ももが床と平行になるくらいまで下ろし、ゆっくり立つ。15回。'],point:'かかとが浮くようなら、足幅を広げるかかかとの下に薄い板を置く。'},
+  'ランジ':{cat:'下半身強化・バランス',steps:['足を揃えて立つ。','片足を大きく一歩前に踏み出し、両膝を曲げて体を真下に下ろす。','前膝が90度、後ろ膝が床すれすれになるのが理想。','前足で地面を蹴って元の位置に戻す。左右各10回。'],point:'前膝がつま先より前に出ないように。上体は常に真っ直ぐ。'},
+  'プランク':{cat:'体幹全体の強化',steps:['うつ伏せになり、肘を肩の下に置く。','足のつま先と肘で体を持ち上げ、頭から踵まで一直線にする。','お腹に力を入れ、腰が落ちないように20〜30秒キープ。','きつければ膝をついた「ニープランク」で行う。'],point:'腰が下がりやすいので、おへそを背骨に引き込む意識で。お尻は上げすぎない。'},
+  'ヒップサークル':{cat:'股関節のウォームアップ',steps:['足を肩幅に開いて立つ。手を腰に当てる。','骨盤を大きく円を描くようにゆっくり回す（前→右→後→左）。','10回まわしたら、反対回りも10回。'],point:'肩や上半身は動かさず、骨盤だけを動かすイメージで。'},
+};
+
+// ===== MENUS =====
+const MENUS={
+  cf:{short:'クロスフィット + CF後ケア',items:[
+    {name:'クロスフィット参加',note:'最も軽いor2番目に軽い重量で。フォーム優先'},
+    {name:'CF後：横隔膜呼吸',note:'10回。腹圧を意識して',key:'横隔膜呼吸'},
+    {name:'CF後：ヒップフレクサーストレッチ',note:'左右各30秒',key:'ヒップフレクサーストレッチ'},
+    {name:'CF後：肩甲骨ウォールスライド',note:'10回',key:'肩甲骨ウォールスライド'},
+    {name:'CF後：ポールほぐし',note:'胸椎・腰椎を2〜3分'},
+  ]},
+  bd:{short:'バドミントン + Bd前後ケア',items:[
+    {name:'Bd前：ヒップサークル',note:'左右各10回',key:'ヒップサークル'},
+    {name:'Bd前：肩甲骨ウォールスライド',note:'10回',key:'肩甲骨ウォールスライド'},
+    {name:'バドミントン練習',note:'今日のテーマを1つ決めてから入る'},
+    {name:'Bd後：ヒップフレクサーストレッチ',note:'左右各30秒',key:'ヒップフレクサーストレッチ'},
+    {name:'Bd後：クラムシェル',note:'左右各15回',key:'クラムシェル'},
+    {name:'水分・塩分補給',note:'練習30分前から意識。首・手首を冷やす'},
+  ]},
+  sup:{short:'休日補強メニュー 30〜60分',items:[
+    {name:'ウォームアップ：横隔膜呼吸',note:'10回',key:'横隔膜呼吸'},
+    {name:'スクワット（自重）',note:'15回×3セット',key:'スクワット'},
+    {name:'ランジ（前後）',note:'左右各10回×2セット',key:'ランジ'},
+    {name:'グルートブリッジ（片足）',note:'左右各10回×2セット',key:'グルートブリッジ'},
+    {name:'プランク',note:'20〜30秒×3セット',key:'プランク'},
+    {name:'バードドッグ',note:'左右各10回×2セット',key:'バードドッグ'},
+    {name:'クラムシェル（チューブ）',note:'左右各15回×2セット',key:'クラムシェル'},
+    {name:'クールダウン：ポールほぐし',note:'胸椎・腰椎 3分'},
+  ]},
+  rec_10:{short:'回復・ストレッチ 10分',items:[
+    {name:'横隔膜呼吸（仰向け）',note:'10回',key:'横隔膜呼吸'},
+    {name:'キャット＆カウ',note:'10回。呼吸に合わせてゆっくり',key:'キャット＆カウ'},
+    {name:'胸椎回旋ストレッチ（横向き）',note:'左右各5回',key:'胸椎回旋ストレッチ'},
+    {name:'ヒップフレクサーストレッチ',note:'左右各30秒',key:'ヒップフレクサーストレッチ'},
+    {name:'肩甲骨ウォールスライド',note:'10回',key:'肩甲骨ウォールスライド'},
+  ]},
+  rec_20:{short:'姿勢改善ストレッチ 20分',items:[
+    {name:'横隔膜呼吸',note:'10回',key:'横隔膜呼吸'},
+    {name:'ニートゥーチェスト',note:'左右各5回',key:'ニートゥーチェスト'},
+    {name:'キャット＆カウ',note:'10回',key:'キャット＆カウ'},
+    {name:'胸椎回旋ストレッチ',note:'左右各5回',key:'胸椎回旋ストレッチ'},
+    {name:'ヒップフレクサーストレッチ',note:'左右各30秒',key:'ヒップフレクサーストレッチ'},
+    {name:'デッドバグ',note:'左右各5回。ゆっくりが大切',key:'デッドバグ'},
+    {name:'グルートブリッジ',note:'15回×1〜2セット',key:'グルートブリッジ'},
+    {name:'クラムシェル',note:'左右各15回',key:'クラムシェル'},
+  ]},
+  rest:{short:'完全休養・回復の日',items:[
+    {name:'今日はしっかり休む',note:'回復もトレーニングのうち'},
+    {name:'水分をこまめに摂る',note:'1.5〜2L目標'},
+    {name:'睡眠を7時間確保する',note:'就寝時間を意識して'},
+    {name:'気が向けばポールほぐし',note:'5分でOK。強制しない'},
+  ]},
+  off:{short:'個人予定の日（運動なし）',items:[
+    {name:'今日は運動なし',note:'予定を楽しんで'},
+    {name:'水分補給は意識する',note:'1.5L目標'},
+  ]},
+};
+
+const BD_TIPS=[
+  ['打ったら必ず戻る','ホームポジション意識'],
+  ['ネット前、積極的に出る','前衛の動きを意識'],
+  ['相手が後ろにいる時は前衛に入る','トップアンドバック陣形'],
+  ['試合前半は70%の力で入る','ペース配分を意識'],
+  ['ショートサーブの精度を上げる','サーブからの展開を作る'],
+  ['後ろへの移動はクロスステップで','フットワークを丁寧に'],
+  ['スマッシュ後は必ずポジションに戻る','ローテーション意識'],
+];
+
+const QUOTES=['昨日より0.1%だけ良くなれば、それで十分。','疲れたら休む。それも計画のうち。','姿勢は、自分への敬意のかたち。','小さな積み上げが、3ヶ月後の自分をつくる。','完璧じゃなくていい。続けることが強さ。','今日のケアが、明日の動きを変える。','体は正直。記録は裏切らない。','休息は弱さではなく、戦略。','バドミントンは、足から始まる。','記録が途切れても、今日からまた始めればいい。'];
+
+const CL_BASE=[{id:'mobility',label:'ストレッチ・体操を完了',sub:'今日のメニューを実施'},{id:'water',label:'水分 1.5L以上',sub:'こまめに摂取'},{id:'sleep',label:'睡眠時間を入力',sub:'昨夜の睡眠を記録'},{id:'protein',label:'タンパク質を意識する',sub:'目安85g/日'}];
+const CL_CF=[{id:'cf_done',label:'クロスフィット完了',sub:'今日のWODをこなした'},{id:'cf_stretch',label:'CF後のストレッチ完了',sub:'股関節・肩甲骨・ポールほぐし'},{id:'cf_weight',label:'使用重量をメモした',sub:''}];
+const CL_BD=[{id:'bd_done',label:'バドミントン練習完了',sub:'今日のテーマを意識した'},{id:'bd_theme',label:'意識ポイントを確認した',sub:''},{id:'bd_stretch',label:'Bd後のストレッチ完了',sub:'股関節・内もも'},{id:'bd_hydrate',label:'水分・塩分補給できた',sub:'熱中症対策'}];
+const CL_SUP=[{id:'sup_done',label:'補強メニュー完了',sub:'30〜60分の自重トレ'}];
+const CL_REST=[{id:'rest_water',label:'水分をこまめに摂った',sub:''},{id:'rest_sleep',label:'早めに就寝する',sub:'7時間確保を意識'}];
+
+const WEEK_THEMES=['姿勢リセット週間：まず毎日のストレッチ習慣を作る','フォーム確認週間：CF・Bdで動きの質を意識する','回復力強化週間：水分・睡眠・ストレッチを丁寧に','バドミントン意識週間：ポジショニングに集中する','体幹安定週間：バードドッグ・デッドバグを丁寧に','スタミナ基礎週間：呼吸を意識してCF・Bdに取り組む'];
+const MONTH_NAMES=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+// ===== STATE =====
+let todayKey=getTodayKey(),currentRange=7,starValues={cfHard:0,fatigue:0},painValues={};
+let calYear=2026,calMonth=4,weekOffset=0;
+
+function getTodayKey(){const d=new Date();return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;}
+function p2(n){return String(n).padStart(2,'0');}
+function fmtKey(d){return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;}
+function loadData(k,def){try{return JSON.parse(localStorage.getItem(k))||def;}catch(e){return def;}}
+function saveData(k,v){localStorage.setItem(k,JSON.stringify(v));}
+
+function getSched(key){return SCHEDULE[key]||{type:'rec',label:'回復・ストレッチ',cssClass:'rec'};}
+function getMenu(sched){
+  if(sched.type==='cf') return MENUS.cf;
+  if(sched.type==='bd') return MENUS.bd;
+  if(sched.type==='sup') return MENUS.sup;
+  if(sched.type==='rest') return MENUS.rest;
+  if(sched.type==='off') return MENUS.off;
+  return (sched.label&&sched.label.includes('20'))?MENUS.rec_20:MENUS.rec_10;
+}
+function getCL(sched){
+  let l=[...CL_BASE];
+  if(sched.type==='cf') l=[...CL_CF,...l];
+  else if(sched.type==='bd') l=[...CL_BD,...l];
+  else if(sched.type==='sup') l=[...CL_SUP,...l];
+  else if(sched.type==='rest'||sched.type==='off') l=[...CL_REST];
+  return l;
+}
+function typeCol(type){
+  const m={cf:{bg:'var(--cf-bg)',c:'var(--cf-color)'},bd:{bg:'var(--bd-bg)',c:'var(--bd-color)'},sup:{bg:'var(--sup-bg)',c:'var(--sup-color)'},rec:{bg:'var(--rec-bg)',c:'var(--rec-color)'},rest:{bg:'var(--rest-bg)',c:'var(--rest-color)'},off:{bg:'var(--off-bg)',c:'var(--off-color)'}};
+  return m[type]||m.rec;
+}
+
+// Monday-of-week helper (0=Mon...6=Sun)
+function getMon(d){
+  const dt=new Date(d); dt.setHours(0,0,0,0);
+  const dow=dt.getDay(); const diff=dow===0?-6:1-dow;
+  dt.setDate(dt.getDate()+diff); return dt;
+}
+// Dow index Mon=0..Sun=6
+function dowMon(d){const dow=d.getDay();return dow===0?6:dow-1;}
+const DOW_JP_MON=['月','火','水','木','金','土','日'];
+
+// ===== TODAY =====
+function initToday(){
+  const now=new Date();
+  document.getElementById('headerDate').textContent=`${now.getMonth()+1}/${now.getDate()}（${'日月火水木金土'[now.getDay()]}）`;
+  const sched=getSched(todayKey), menu=getMenu(sched), cl=getCL(sched), col=typeCol(sched.type);
+  document.getElementById('dayTypeBadgeWrap').innerHTML=`<div class="day-type-badge" style="background:${col.bg};color:${col.c};">${sched.label}</div>`;
+  document.getElementById('todayMenuList').innerHTML=`<div style="font-size:14px;color:var(--muted);margin-bottom:8px;">${menu.short}</div>`;
+  const det=document.getElementById('menuDetail');
+  det.innerHTML='<div style="margin-top:10px;">'+menu.items.map((it,i)=>{
+    const hasP=it.key&&EX[it.key];
+    const nm=hasP?`<span class="menu-name-popup" onclick="openPopup('${it.key}')">${it.name} ▸</span>`:`<div class="menu-name">${it.name}</div>`;
+    return `<div class="menu-item"><div class="menu-num">${i+1}</div><div class="menu-detail">${nm}${it.note?`<div class="menu-note">${it.note}</div>`:''}</div></div>`;
+  }).join('')+'</div>';
+  document.getElementById('cfLogCard').style.display=sched.type==='cf'?'block':'none';
+  document.getElementById('bdLogCard').style.display=sched.type==='bd'?'block':'none';
+  if(sched.type==='bd'){
+    const n=Object.keys(SCHEDULE).filter(k=>SCHEDULE[k].type==='bd'&&k<=todayKey).length;
+    const tips=BD_TIPS[(n-1)%BD_TIPS.length];
+    document.getElementById('bdTipsWrap').innerHTML=tips.map(t=>`<span class="tip-chip">${t}</span>`).join('');
+  }
+  renderCL(cl);
+  document.getElementById('quoteText').textContent=`「${QUOTES[Math.floor(Math.random()*QUOTES.length)]}」`;
+  loadLogs(); updateProg();
+}
+
+function renderCL(cl){
+  const saved=loadData(`check_${todayKey}`,{});
+  const wrap=document.getElementById('checklistWrap'); wrap.innerHTML='';
+  cl.forEach(it=>{
+    const done=saved[it.id]||false;
+    const div=document.createElement('div');
+    div.className=`check-item${done?' done':''}`;
+    div.innerHTML=`<div class="check-box"><svg viewBox="0 0 13 10" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><polyline points="1 5 5 9 12 1"/></svg></div><div><div class="check-label">${it.label}</div>${it.sub?`<div class="check-sub">${it.sub}</div>`:''}</div>`;
+    div.addEventListener('click',()=>{const s=loadData(`check_${todayKey}`,{});s[it.id]=!s[it.id];saveData(`check_${todayKey}`,s);div.classList.toggle('done',s[it.id]);updateProg();});
+    wrap.appendChild(div);
+  });
+}
+
+function updateProg(){
+  const sched=getSched(todayKey),cl=getCL(sched),saved=loadData(`check_${todayKey}`,{});
+  const total=cl.length,done=cl.filter(i=>saved[i.id]).length;
+  const pct=total>0?Math.round(done/total*100):0;
+  document.getElementById('ringPct').textContent=`${pct}%`;
+  document.getElementById('miniProgressLabel').textContent=`今日の達成率 ${pct}%`;
+  document.getElementById('miniProgressFill').style.width=`${pct}%`;
+  document.getElementById('ringFill').setAttribute('stroke-dashoffset',251.2-(pct/100)*251.2);
+  const msgs=[[0,'今日も丁寧に、一歩ずつ。'],[30,'いいスタート！続けよう。'],[60,'半分以上！調子いいね。'],[80,'もうすぐ完璧！あと少し。'],[100,'今日も完走！お疲れさま。']];
+  let msg=msgs[0][1]; for(const [t,m] of msgs){if(pct>=t)msg=m;}
+  document.getElementById('motivateMsg').textContent=msg;
+  const rates=loadData('daily_rates',{});
+  if(total>0){rates[todayKey]=pct;saveData('daily_rates',rates);}
+}
+
+function loadLogs(){
+  const c=loadData(`cond_${todayKey}`,{});
+  if(c.sleep) document.getElementById('sleepHour').value=c.sleep;
+  if(c.fatigue) setStar('fatigue',c.fatigue);
+  if(c.memo) document.getElementById('condMemo').value=c.memo;
+  ['wrist','hip','back','shoulder'].forEach(p=>{if(c[p]){painValues[p]=c[p];document.querySelectorAll(`[onclick*="setPain('${p}'"]`).forEach(b=>{if(b.getAttribute('onclick').includes(`'${c[p]}'`))b.classList.add('selected');});}});
+  const cf=loadData(`cf_${todayKey}`,{});
+  if(cf.wod) document.getElementById('cfWod').value=cf.wod;
+  if(cf.weight) document.getElementById('cfWeight').value=cf.weight;
+  if(cf.hard) setStar('cfHard',cf.hard);
+  if(cf.coach) document.getElementById('cfCoach').value=cf.coach;
+  const bd=loadData(`bd_${todayKey}`,{});
+  const bn=document.getElementById('bdNote'); if(bd.note&&bn) bn.value=bd.note;
+}
+function saveCondLog(){saveData(`cond_${todayKey}`,{sleep:document.getElementById('sleepHour').value,fatigue:starValues.fatigue,memo:document.getElementById('condMemo').value,wrist:painValues.wrist||'',hip:painValues.hip||'',back:painValues.back||'',shoulder:painValues.shoulder||''});showToast('体調を保存しました');}
+function saveCfLog(){saveData(`cf_${todayKey}`,{wod:document.getElementById('cfWod').value,weight:document.getElementById('cfWeight').value,hard:starValues.cfHard,coach:document.getElementById('cfCoach').value,cfWrist:painValues.cfWrist||'',cfHip:painValues.cfHip||''});showToast('CF記録を保存しました');}
+function saveBdLog(){const n=document.getElementById('bdNote');saveData(`bd_${todayKey}`,{note:n?n.value:''});showToast('Bd記録を保存しました');}
+function setStar(type,val){starValues[type]=val;const id=(type==='fatigue'?'fatigue':'cfHard')+'Star';const el=document.getElementById(id);if(!el)return;el.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('filled',i<val));}
+function setPain(k,v,btn){painValues[k]=v;btn.parentElement.querySelectorAll('.pain-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');}
+
+let menuOpen=false;
+function toggleMenuDetail(){menuOpen=!menuOpen;const el=document.getElementById('menuDetail');el.style.maxHeight=menuOpen?el.scrollHeight+'px':'0';document.querySelector('[onclick="toggleMenuDetail()"]').textContent=menuOpen?'▾ 閉じる':'▸ 種目詳細を見る';}
+
+function showToast(msg){let t=document.getElementById('_toast');if(!t){t=document.createElement('div');t.id='_toast';t.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--charcoal);color:white;padding:8px 18px;border-radius:20px;font-size:13px;z-index:999;opacity:0;transition:opacity .3s;';document.body.appendChild(t);}t.textContent=msg;t.style.opacity='1';setTimeout(()=>{t.style.opacity='0';},2000);}
+
+// ===== POPUP =====
+function openPopup(name){
+  const d=EX[name]; if(!d) return;
+  document.getElementById('exPopupCat').textContent=d.cat;
+  document.getElementById('exPopupTitle').textContent=name;
+  document.getElementById('exPopupBody').innerHTML=d.steps.map((s,i)=>`<div class="popup-step"><div class="popup-step-num">${i+1}</div><div class="popup-step-text">${s}</div></div>`).join('')+`<div class="popup-point">ポイント：${d.point}</div>`;
+  document.getElementById('exPopupOverlay').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function closePopupBg(e){if(e.target===document.getElementById('exPopupOverlay'))closePopup();}
+function closePopup(){document.getElementById('exPopupOverlay').style.display='none';document.body.style.overflow='';}
+
+// ===== WEEK TAB =====
+function changeWeek(d){weekOffset+=d;renderWeekTab();}
+
+function renderWeekTab(){
+  const mon=getMon(new Date());
+  mon.setDate(mon.getDate()+weekOffset*7);
+  const sun=new Date(mon); sun.setDate(mon.getDate()+6);
+  const fmt=d=>`${d.getMonth()+1}/${d.getDate()}`;
+  document.getElementById('weekTabTitle').textContent=`${fmt(mon)}（月）〜${fmt(sun)}（日）`;
+  const baseDate=new Date(2026,4,11);
+  const wIdx=Math.round((mon-baseDate)/(7*864e5));
+  const theme=WEEK_THEMES[((wIdx%WEEK_THEMES.length)+WEEK_THEMES.length)%WEEK_THEMES.length];
+  document.getElementById('weekThemeCard').innerHTML=`<div class="week-theme-label">今週のテーマ</div><div class="week-theme-text">${theme}</div>`;
+  const todayStr=getTodayKey();
+  let html='';
+  for(let i=0;i<7;i++){
+    const d=new Date(mon); d.setDate(mon.getDate()+i);
+    const key=fmtKey(d), sched=SCHEDULE[key], isToday=key===todayStr;
+    const col=sched?typeCol(sched.type):{bg:'var(--off-bg)',c:'var(--off-color)'};
+    const menu=sched?getMenu(sched):null;
+    let itemsHtml='';
+    if(menu&&menu.items){
+      itemsHtml=menu.items.slice(0,4).map(it=>{
+        const hasP=it.key&&EX[it.key];
+        return `<div>・${hasP?`<button class="day-card-popup-link" onclick="openPopup('${it.key}')">${it.name} ▸</button>`:`${it.name}`}</div>`;
+      }).join('');
+      if(menu.items.length>4) itemsHtml+=`<div style="color:var(--muted2);font-size:11px;">他${menu.items.length-4}種目</div>`;
+    }
+    const badge=sched?`<div class="day-card-badge" style="background:${col.bg};color:${col.c};">${sched.label}</div>`:`<div class="day-card-badge" style="background:var(--off-bg);color:var(--off-color);">スケジュール外</div>`;
+    html+=`<div class="day-card${isToday?' today-card':''}"><div class="day-card-header"><div class="day-card-dow">${DOW_JP_MON[i]}</div><div class="day-card-date">${fmt(d)}</div>${badge}</div>${itemsHtml?`<div class="day-card-menu">${itemsHtml}</div>`:'<div style="font-size:12px;color:var(--muted2);font-style:italic;">予定なし</div>'}</div>`;
+  }
+  document.getElementById('weekDayCards').innerHTML=html;
+}
+
+// ===== CALENDAR (Mon-first) =====
+function changeMonth(d){calMonth+=d;if(calMonth<0){calMonth=11;calYear--;}if(calMonth>11){calMonth=0;calYear++;}document.getElementById('calDetail').style.display='none';renderCal();}
+function initCalendar(){const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth();const pre=`${calYear}-${p2(calMonth+1)}`;if(!Object.keys(SCHEDULE).some(k=>k.startsWith(pre))){calYear=2026;calMonth=4;}renderCal();}
+
+function renderCal(){
+  const grid=document.getElementById('calGrid'); grid.innerHTML='';
+  document.getElementById('calMonthTitle').textContent=`${calYear}年${MONTH_NAMES[calMonth]}`;
+  // Mon-first headers
+  ['月','火','水','木','金','土','日'].forEach((d,i)=>{
+    const el=document.createElement('div');
+    el.className='cal-dow'+(i===6?' sun':'');
+    el.textContent=d; grid.appendChild(el);
+  });
+  // offset: how many empty cells before 1st (Mon=0)
+  const firstDow=new Date(calYear,calMonth,1).getDay();
+  const offset=firstDow===0?6:firstDow-1;
+  for(let i=0;i<offset;i++){const el=document.createElement('div');el.className='cal-cell empty';grid.appendChild(el);}
+  const dim=new Date(calYear,calMonth+1,0).getDate();
+  const today=new Date(), isCurrent=today.getFullYear()===calYear&&today.getMonth()===calMonth;
+  for(let d=1;d<=dim;d++){
+    const key=`${calYear}-${p2(calMonth+1)}-${p2(d)}`;
+    const sched=SCHEDULE[key];
+    const el=document.createElement('div');
+    el.className=`cal-cell ${sched?sched.cssClass:''}`;
+    if(isCurrent&&today.getDate()===d) el.classList.add('today');
+    el.innerHTML=`<div class="cal-num">${d}</div>${sched?'<div class="cal-dot"></div>':''}`;
+    el.addEventListener('click',()=>showCalDetail(key,d,sched));
+    grid.appendChild(el);
+  }
+  renderCalSum();
+}
+
+function showCalDetail(key,d,sched){
+  const det=document.getElementById('calDetail');
+  if(!sched){det.style.display='none';return;}
+  const dow=DOW_JP_MON[dowMon(new Date(key+'T00:00:00'))];
+  const col=typeCol(sched.type), menu=getMenu(sched), mn=calMonth+1;
+  const items=menu.items.map(it=>{
+    const hasP=it.key&&EX[it.key];
+    return `<div>・${hasP?`<button class="cal-menu-popup-btn" onclick="openPopup('${it.key}')">${it.name} ▸</button>`:`${it.name}`}${it.note?`<span style="color:var(--muted2);font-size:11px;"> — ${it.note}</span>`:''}</div>`;
+  }).join('');
+  det.style.display='block';
+  det.innerHTML=`<div class="cal-detail-date">${mn}月${d}日（${dow}）</div><div class="cal-detail-type" style="background:${col.bg};color:${col.c};">${sched.label}</div><div class="cal-detail-menu">${items}</div>`;
+  det.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function renderCalSum(){
+  const pre=`${calYear}-${p2(calMonth+1)}`;
+  const cnt={cf:0,bd:0,sup:0,rest:0};
+  Object.keys(SCHEDULE).filter(k=>k.startsWith(pre)).forEach(k=>{const t=SCHEDULE[k].type;if(cnt[t]!==undefined)cnt[t]++;});
+  document.getElementById('calSummaryCard').innerHTML=`<div class="card-title">${MONTH_NAMES[calMonth]}サマリー</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="background:var(--cf-bg);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--cf-color);">${cnt.cf}</div><div style="font-size:11px;color:var(--cf-color);margin-top:2px;">クロスフィット</div></div><div style="background:var(--bd-bg);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--bd-color);">${cnt.bd}</div><div style="font-size:11px;color:var(--bd-color);margin-top:2px;">バドミントン</div></div><div style="background:var(--sup-bg);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--sup-color);">${cnt.sup}</div><div style="font-size:11px;color:var(--sup-color);margin-top:2px;">補強</div></div><div style="background:var(--rest-bg);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--rest-color);">${cnt.rest}</div><div style="font-size:11px;color:var(--rest-color);margin-top:2px;">完全休養</div></div></div>`;
+}
+
+// ===== GRAPH (Mon-first week groups, monthly review on last day) =====
+function initGraph(){renderGraph(currentRange);renderWeekMsg();}
+function setRange(n,btn){currentRange=n;document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderGraph(n);}
+
+function renderGraph(days){
+  const container=document.getElementById('graphContainer'); container.innerHTML='';
+  const rates=loadData('daily_rates',{});
+  const today=new Date(); today.setHours(0,0,0,0);
+  const entries=[];
+  for(let i=days-1;i>=0;i--){
+    const d=new Date(today); d.setDate(today.getDate()-i);
+    entries.push({date:new Date(d),key:fmtKey(d),mn:d.getMonth()+1,day:d.getDate(),isToday:i===0,lastOfMonth:d.getDate()===new Date(d.getFullYear(),d.getMonth()+1,0).getDate()});
+  }
+  // Group by Mon-week
+  let curMon=null, wg=[], groups=[];
+  entries.forEach(e=>{
+    const m=fmtKey(getMon(e.date));
+    if(m!==curMon){if(wg.length)groups.push({mon:curMon,days:[...wg]});curMon=m;wg=[e];}
+    else wg.push(e);
+  });
+  if(wg.length) groups.push({mon:curMon,days:[...wg]});
+
+  let firstGroup=true;
+  groups.forEach(grp=>{
+    const monD=new Date(grp.mon+'T00:00:00');
+    const sec=document.createElement('div');
+    sec.className='graph-section-label'+(firstGroup?' first':'');
+    firstGroup=false;
+    sec.textContent=`${monD.getMonth()+1}/${monD.getDate()}週`;
+    container.appendChild(sec);
+
+    grp.days.forEach(e=>{
+      const pct=rates[e.key]!==undefined?rates[e.key]:null;
+      const row=document.createElement('div'); row.className='graph-row';
+      const dateEl=document.createElement('div');
+      dateEl.className='graph-date'+(e.isToday?' today-lbl':'');
+      dateEl.textContent=`${e.mn}/${e.day}（${DOW_JP_MON[dowMon(e.date)]}）`;
+      const wrap=document.createElement('div'); wrap.className='graph-bar-wrap';
+      if(pct===null){const em=document.createElement('div');em.className='graph-empty';em.textContent='未記録';wrap.appendChild(em);}
+      else{const bar=document.createElement('div');bar.className=`graph-bar ${pct>=80?'high':pct>=50?'mid':'low'}`;bar.style.width='0%';if(pct>15){const pe=document.createElement('div');pe.className='graph-pct';pe.textContent=`${pct}%`;bar.appendChild(pe);}wrap.appendChild(bar);setTimeout(()=>{bar.style.width=`${pct}%`;},50);}
+      row.appendChild(dateEl); row.appendChild(wrap); container.appendChild(row);
+
+      if(e.lastOfMonth){
+        const yr=e.date.getFullYear(), mo=e.date.getMonth();
+        const mRates=[];
+        for(let dd=1;dd<=e.day;dd++){const k=`${yr}-${p2(mo+1)}-${p2(dd)}`;if(rates[k]!==undefined)mRates.push(rates[k]);}
+        const rev=document.createElement('div'); rev.className='monthly-review';
+        if(mRates.length===0){
+          rev.innerHTML=`<div class="monthly-review-title">📋 ${e.mn}月の振り返り</div><div style="color:var(--muted);">記録が始まると、ここに月次レポートが自動生成されます。</div>`;
+        } else {
+          const avg=Math.round(mRates.reduce((a,b)=>a+b,0)/mRates.length);
+          const recRate=Math.round(mRates.length/e.day*100);
+          let ach='',hyp='',cond='';
+          if(avg>=80) ach=`${e.mn}月の平均達成率は${avg}%。非常に高い継続率です！`;
+          else if(avg>=60) ach=`${e.mn}月の平均達成率は${avg}%。良いペースで継続できています。`;
+          else if(avg>=40) ach=`${e.mn}月の平均達成率は${avg}%。ムラはあるものの記録を続けられています。`;
+          else ach=`${e.mn}月の平均達成率は${avg}%。記録できた日は着実に積み上がっています。`;
+          if(avg>=70) hyp='チェックリストを習慣化できている日が多い点が高達成率につながっている可能性があります。引き続き「完璧より継続」を意識して。';
+          else if(avg>=50) hyp='達成率にムラがある場合、疲労が溜まった翌日や仕事が忙しい日にチェックが落ちやすい傾向が考えられます。疲労の高い日こそ「ストレッチ1つだけ」を意識してみて。';
+          else hyp='記録できていない日が多い場合、チェック項目が多すぎる可能性があります。まず「水分」「ストレッチ」の2つだけをゴールにする週を試してみて。';
+          cond=`記録日数：${mRates.length}日 / ${e.day}日（記録率 ${recRate}%）。次月は「体調ログ」も意識して記録すると、痛みや疲労のパターンが見えてきます。`;
+          rev.innerHTML=`<div class="monthly-review-title">📋 ${e.mn}月の振り返り</div><div><b>${ach}</b></div><br><div style="color:var(--muted);">【達成度の要因仮説】${hyp}</div><br><div style="color:var(--muted);">【体調面】${cond}</div>`;
+        }
+        container.appendChild(rev);
+      }
+    });
+  });
+}
+
+function renderWeekMsg(){
+  const rates=loadData('daily_rates',{});
+  const mon=getMon(new Date());
+  const wRates=[];
+  for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(mon.getDate()+i);const k=fmtKey(d);if(rates[k]!==undefined)wRates.push(rates[k]);}
+  let msg='記録を始めると、ここに振り返りが表示されます。今日からチェックを入れてみて！';
+  if(wRates.length>0){
+    const avg=Math.round(wRates.reduce((a,b)=>a+b,0)/wRates.length);
+    if(avg>=80) msg=`今週（月〜）の平均達成率は${avg}%。素晴らしいペースです！この調子で来週も。`;
+    else if(avg>=60) msg=`今週（月〜）の平均達成率は${avg}%。水分補給と睡眠も一緒に意識してみて。`;
+    else if(avg>=40) msg=`今週（月〜）の平均達成率は${avg}%。焦らず、できるものから積み上げよう。`;
+    else msg=`今週（月〜）の平均達成率は${avg}%。まず1つのチェックから。続けることが大事。`;
+  }
+  document.getElementById('weekMsg').textContent=msg;
+}
+
+// ===== NAV =====
+function showScreen(name,btn){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`screen-${name}`).classList.add('active');
+  btn.classList.add('active');
+  if(name==='week'){weekOffset=0;renderWeekTab();}
+  if(name==='cal') initCalendar();
+  if(name==='graph') initGraph();
+}
+
+initToday();
+</script>
+</body>
+</html>
